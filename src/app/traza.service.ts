@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 declare global { interface Window { __TRAZA_API_URL__?: string; } }
 export const API = (typeof window !== 'undefined' && window.__TRAZA_API_URL__) || 'http://localhost:8080/api';
 
+export interface ViaPlaza { numero:string; }
 export interface Evento {
   id?: string;
   tipo: 'INCIDENCIA'|'MEDICION';
@@ -54,6 +55,15 @@ export class TrazaService {
   }
   catalogos():Observable<{plazas:{codigo:string;nombre:string}[];turnos:string[]}>{
     return this.http.get<{plazas:{codigo:string;nombre:string}[];turnos:string[]}>(API+'/catalogos');
+  }
+  viasDePlaza(plaza:string):Observable<ViaPlaza[]>{
+    return this.http.get<ViaPlaza[]>(API+'/plazas/'+encodeURIComponent(plaza)+'/vias');
+  }
+  asignarVias(plaza:string,desde:number,hasta:number):Observable<ViaPlaza[]>{
+    return this.http.post<ViaPlaza[]>(API+'/plazas/'+encodeURIComponent(plaza)+'/vias',{desde,hasta});
+  }
+  desactivarVia(plaza:string,numero:string):Observable<void>{
+    return this.http.delete<void>(API+'/plazas/'+encodeURIComponent(plaza)+'/vias/'+encodeURIComponent(numero));
   }
   listar(filtros:Record<string,string>={}):Observable<Evento[]>{
     const params = new URLSearchParams(Object.entries(filtros).filter(([,v])=>!!v));
