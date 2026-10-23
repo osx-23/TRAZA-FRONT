@@ -117,88 +117,168 @@
                     <label for="report-field-situacion">Condición del tránsito</label>
                     <select id="report-field-situacion" name="situacion" [(ngModel)]="form.situacion"><option value="">Seleccionar una opción</option><option *ngFor="let s of situaciones" [value]="s">{{s}}</option></select>
                   </div>
-                  <div class="report-photo-area">
-                      <div class="report-photo-caption"><span>FOTOGRAFÍA DE EVIDENCIA</span><span class="report-photo-ready" *ngIf="fotos['PLAZA']">✓ Lista</span></div>
-                      <div class="report-photo-preview" *ngIf="previsualizaciones['PLAZA']">
-                        <img [src]="previsualizaciones['PLAZA']" alt="Vista previa de Situación de la plaza">
-                        <div><strong>{{fotos['PLAZA']?.name}}</strong><small>Imagen preparada para subir</small></div>
-                        <button type="button" class="report-photo-remove" (click)="quitarFoto('PLAZA')" aria-label="Quitar fotografía de Situación de la plaza">×</button>
-                      </div>
-                      <div class="report-photo-actions">
-                        <label class="report-upload-button"><span>＋</span> Seleccionar foto
-                          <input type="file" class="report-file-hidden" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'PLAZA')">
-                        </label>
-                        <button type="button" class="report-paste-button" (paste)="pegarArchivo($event,'PLAZA')" title="Haz clic y pega una fotografía con Ctrl+V o Cmd+V">⌘ Pegar imagen</button>
-                      </div>
-                      <small class="report-photo-hint">Copia la captura, enfoca «Pegar imagen» y presiona Ctrl+V / Cmd+V · hasta 4 MB</small>
-                    </div>
-                </article>
+                  <div class="report-evidence-square"
+                    tabindex="0"
+                    role="group"
+                    aria-label="Evidencia fotográfica de situación de plaza. Selecciona el recuadro para pegar con Ctrl o Cmd más V."
+                    [class.is-active]="evidenciaPegadoActiva==='PLAZA'"
+                    [class.has-photo]="!!previsualizaciones['PLAZA']"
+                    (click)="activarPegado('PLAZA')"
+                    (focus)="activarPegado('PLAZA')"
+                    (dragover)="sobreArrastre($event)"
+                    (drop)="soltarArchivo($event,'PLAZA')">
+                  <div class="report-evidence-content" *ngIf="!previsualizaciones['PLAZA']">
+                    <span class="report-evidence-icon" aria-hidden="true">↑</span>
+                    <strong>Agregar evidencia</strong>
+                    <p>Selecciona este recuadro y pega una captura de pantalla</p>
+                  </div>
+                  <div class="report-evidence-image" *ngIf="previsualizaciones['PLAZA']">
+                    <img [src]="previsualizaciones['PLAZA']" alt="Vista previa de evidencia de situación de plaza">
+                    <span class="report-evidence-ready">✓ Imagen lista</span>
+                  </div>
+                  <div class="report-evidence-controls">
+                    <label class="report-evidence-file" (click)="$event.stopPropagation();activarPegado('PLAZA')">
+                      <span aria-hidden="true">＋</span> {{previsualizaciones['PLAZA']?'Cambiar foto':'Seleccionar archivo'}}
+                      <input type="file" accept="image/jpeg,image/png,image/webp"
+                        (change)="seleccionarArchivo($event,'PLAZA')">
+                    </label>
+                    <span class="report-evidence-shortcut" *ngIf="!previsualizaciones['PLAZA']">
+                      <strong>Ctrl+V / Cmd+V</strong>
+                      <small>para pegar aquí</small>
+                    </span>
+                    <button type="button" class="report-evidence-remove"
+                      *ngIf="previsualizaciones['PLAZA']"
+                      (click)="$event.stopPropagation();quitarFoto('PLAZA')">× Quitar</button>
+                  </div>
+                  <small class="report-evidence-hint">JPG · PNG · WEBP · máximo 4 MB</small>
+                </div>
+              </article>
               <article class="report-detail-card">
-                  <div class="report-detail-header"><span class="report-card-icon">⇥</span><div><span class="report-card-step">CONDICIÓN 02</span><h3>Ingreso de motorizados</h3><p>Estado del apoyo en plaza</p></div></div>
+                  <div class="report-detail-header"><span class="report-card-icon">⇥</span><div><span class="report-card-step">CONDICIÓN 02</span><h3>Ingreso</h3><p>Estado del apoyo en plaza</p></div></div>
                   <div class="report-field">
                     <label for="report-field-ingreso">Estado de ingreso</label>
                     <select id="report-field-ingreso" name="ingreso" [(ngModel)]="form.ingreso"><option value="">Seleccionar una opción</option><option *ngFor="let s of ingresos" [value]="s">{{s}}</option></select>
                   </div>
-                  <div class="report-photo-area">
-                      <div class="report-photo-caption"><span>FOTOGRAFÍA DE EVIDENCIA</span><span class="report-photo-ready" *ngIf="fotos['INGRESO']">✓ Lista</span></div>
-                      <div class="report-photo-preview" *ngIf="previsualizaciones['INGRESO']">
-                        <img [src]="previsualizaciones['INGRESO']" alt="Vista previa de Ingreso de motorizados">
-                        <div><strong>{{fotos['INGRESO']?.name}}</strong><small>Imagen preparada para subir</small></div>
-                        <button type="button" class="report-photo-remove" (click)="quitarFoto('INGRESO')" aria-label="Quitar fotografía de Ingreso de motorizados">×</button>
-                      </div>
-                      <div class="report-photo-actions">
-                        <label class="report-upload-button"><span>＋</span> Seleccionar foto
-                          <input type="file" class="report-file-hidden" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'INGRESO')">
-                        </label>
-                        <button type="button" class="report-paste-button" (paste)="pegarArchivo($event,'INGRESO')" title="Haz clic y pega una fotografía con Ctrl+V o Cmd+V">⌘ Pegar imagen</button>
-                      </div>
-                      <small class="report-photo-hint">Copia la captura, enfoca «Pegar imagen» y presiona Ctrl+V / Cmd+V · hasta 4 MB</small>
-                    </div>
-                </article>
+                  <div class="report-evidence-square"
+                    tabindex="0"
+                    role="group"
+                    aria-label="Evidencia fotográfica de ingreso. Selecciona el recuadro para pegar con Ctrl o Cmd más V."
+                    [class.is-active]="evidenciaPegadoActiva==='INGRESO'"
+                    [class.has-photo]="!!previsualizaciones['INGRESO']"
+                    (click)="activarPegado('INGRESO')"
+                    (focus)="activarPegado('INGRESO')"
+                    (dragover)="sobreArrastre($event)"
+                    (drop)="soltarArchivo($event,'INGRESO')">
+                  <div class="report-evidence-content" *ngIf="!previsualizaciones['INGRESO']">
+                    <span class="report-evidence-icon" aria-hidden="true">↑</span>
+                    <strong>Agregar evidencia</strong>
+                    <p>Selecciona este recuadro y pega una captura de pantalla</p>
+                  </div>
+                  <div class="report-evidence-image" *ngIf="previsualizaciones['INGRESO']">
+                    <img [src]="previsualizaciones['INGRESO']" alt="Vista previa de evidencia de ingreso">
+                    <span class="report-evidence-ready">✓ Imagen lista</span>
+                  </div>
+                  <div class="report-evidence-controls">
+                    <label class="report-evidence-file" (click)="$event.stopPropagation();activarPegado('INGRESO')">
+                      <span aria-hidden="true">＋</span> {{previsualizaciones['INGRESO']?'Cambiar foto':'Seleccionar archivo'}}
+                      <input type="file" accept="image/jpeg,image/png,image/webp"
+                        (change)="seleccionarArchivo($event,'INGRESO')">
+                    </label>
+                    <span class="report-evidence-shortcut" *ngIf="!previsualizaciones['INGRESO']">
+                      <strong>Ctrl+V / Cmd+V</strong>
+                      <small>para pegar aquí</small>
+                    </span>
+                    <button type="button" class="report-evidence-remove"
+                      *ngIf="previsualizaciones['INGRESO']"
+                      (click)="$event.stopPropagation();quitarFoto('INGRESO')">× Quitar</button>
+                  </div>
+                  <small class="report-evidence-hint">JPG · PNG · WEBP · máximo 4 MB</small>
+                </div>
+              </article>
               <article class="report-detail-card">
                   <div class="report-detail-header"><span class="report-card-icon">⚠</span><div><span class="report-card-step">CONDICIÓN 03</span><h3>Incidentes detectados</h3><p>PNP, fallas o eventos relevantes</p></div></div>
                   <div class="report-field">
                     <label for="report-field-incidente">Tipo de incidente</label>
                     <select id="report-field-incidente" name="incidente" [(ngModel)]="form.incidente"><option value="">Seleccionar una opción</option><option *ngFor="let s of incidentes" [value]="s">{{s}}</option></select>
                   </div>
-                  <div class="report-photo-area">
-                      <div class="report-photo-caption"><span>FOTOGRAFÍA DE EVIDENCIA</span><span class="report-photo-ready" *ngIf="fotos['INCIDENTE']">✓ Lista</span></div>
-                      <div class="report-photo-preview" *ngIf="previsualizaciones['INCIDENTE']">
-                        <img [src]="previsualizaciones['INCIDENTE']" alt="Vista previa de Incidentes detectados">
-                        <div><strong>{{fotos['INCIDENTE']?.name}}</strong><small>Imagen preparada para subir</small></div>
-                        <button type="button" class="report-photo-remove" (click)="quitarFoto('INCIDENTE')" aria-label="Quitar fotografía de Incidentes detectados">×</button>
-                      </div>
-                      <div class="report-photo-actions">
-                        <label class="report-upload-button"><span>＋</span> Seleccionar foto
-                          <input type="file" class="report-file-hidden" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'INCIDENTE')">
-                        </label>
-                        <button type="button" class="report-paste-button" (paste)="pegarArchivo($event,'INCIDENTE')" title="Haz clic y pega una fotografía con Ctrl+V o Cmd+V">⌘ Pegar imagen</button>
-                      </div>
-                      <small class="report-photo-hint">Copia la captura, enfoca «Pegar imagen» y presiona Ctrl+V / Cmd+V · hasta 4 MB</small>
-                    </div>
-                </article>
+                  <div class="report-evidence-square"
+                    tabindex="0"
+                    role="group"
+                    aria-label="Evidencia fotográfica de incidente. Selecciona el recuadro para pegar con Ctrl o Cmd más V."
+                    [class.is-active]="evidenciaPegadoActiva==='INCIDENTE'"
+                    [class.has-photo]="!!previsualizaciones['INCIDENTE']"
+                    (click)="activarPegado('INCIDENTE')"
+                    (focus)="activarPegado('INCIDENTE')"
+                    (dragover)="sobreArrastre($event)"
+                    (drop)="soltarArchivo($event,'INCIDENTE')">
+                  <div class="report-evidence-content" *ngIf="!previsualizaciones['INCIDENTE']">
+                    <span class="report-evidence-icon" aria-hidden="true">↑</span>
+                    <strong>Agregar evidencia</strong>
+                    <p>Selecciona este recuadro y pega una captura de pantalla</p>
+                  </div>
+                  <div class="report-evidence-image" *ngIf="previsualizaciones['INCIDENTE']">
+                    <img [src]="previsualizaciones['INCIDENTE']" alt="Vista previa de evidencia de incidente">
+                    <span class="report-evidence-ready">✓ Imagen lista</span>
+                  </div>
+                  <div class="report-evidence-controls">
+                    <label class="report-evidence-file" (click)="$event.stopPropagation();activarPegado('INCIDENTE')">
+                      <span aria-hidden="true">＋</span> {{previsualizaciones['INCIDENTE']?'Cambiar foto':'Seleccionar archivo'}}
+                      <input type="file" accept="image/jpeg,image/png,image/webp"
+                        (change)="seleccionarArchivo($event,'INCIDENTE')">
+                    </label>
+                    <span class="report-evidence-shortcut" *ngIf="!previsualizaciones['INCIDENTE']">
+                      <strong>Ctrl+V / Cmd+V</strong>
+                      <small>para pegar aquí</small>
+                    </span>
+                    <button type="button" class="report-evidence-remove"
+                      *ngIf="previsualizaciones['INCIDENTE']"
+                      (click)="$event.stopPropagation();quitarFoto('INCIDENTE')">× Quitar</button>
+                  </div>
+                  <small class="report-evidence-hint">JPG · PNG · WEBP · máximo 4 MB</small>
+                </div>
+              </article>
               <article class="report-detail-card">
                   <div class="report-detail-header"><span class="report-card-icon">▤</span><div><span class="report-card-step">CONDICIÓN 04</span><h3>Tamaño de la cola</h3><p>Longitud de vehículos en espera</p></div></div>
                   <div class="report-field">
                     <label for="report-field-colaMetros">Longitud observada {{form.tipo==='MEDICION'?'*':''}}</label>
                     <div class="report-meters"><input id="report-field-colaMetros" name="cola" type="number" min="0" max="50000" [(ngModel)]="form.colaMetros" placeholder="Ej. 400"><span>metros</span></div>
                   </div>
-                  <div class="report-photo-area">
-                      <div class="report-photo-caption"><span>FOTOGRAFÍA DE EVIDENCIA</span><span class="report-photo-ready" *ngIf="fotos['COLA']">✓ Lista</span></div>
-                      <div class="report-photo-preview" *ngIf="previsualizaciones['COLA']">
-                        <img [src]="previsualizaciones['COLA']" alt="Vista previa de Tamaño de la cola">
-                        <div><strong>{{fotos['COLA']?.name}}</strong><small>Imagen preparada para subir</small></div>
-                        <button type="button" class="report-photo-remove" (click)="quitarFoto('COLA')" aria-label="Quitar fotografía de Tamaño de la cola">×</button>
-                      </div>
-                      <div class="report-photo-actions">
-                        <label class="report-upload-button"><span>＋</span> Seleccionar foto
-                          <input type="file" class="report-file-hidden" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'COLA')">
-                        </label>
-                        <button type="button" class="report-paste-button" (paste)="pegarArchivo($event,'COLA')" title="Haz clic y pega una fotografía con Ctrl+V o Cmd+V">⌘ Pegar imagen</button>
-                      </div>
-                      <small class="report-photo-hint">Copia la captura, enfoca «Pegar imagen» y presiona Ctrl+V / Cmd+V · hasta 4 MB</small>
-                    </div>
-                </article>
+                  <div class="report-evidence-square"
+                    tabindex="0"
+                    role="group"
+                    aria-label="Evidencia fotográfica de tamaño de cola. Selecciona el recuadro para pegar con Ctrl o Cmd más V."
+                    [class.is-active]="evidenciaPegadoActiva==='COLA'"
+                    [class.has-photo]="!!previsualizaciones['COLA']"
+                    (click)="activarPegado('COLA')"
+                    (focus)="activarPegado('COLA')"
+                    (dragover)="sobreArrastre($event)"
+                    (drop)="soltarArchivo($event,'COLA')">
+                  <div class="report-evidence-content" *ngIf="!previsualizaciones['COLA']">
+                    <span class="report-evidence-icon" aria-hidden="true">↑</span>
+                    <strong>Agregar evidencia</strong>
+                    <p>Selecciona este recuadro y pega una captura de pantalla</p>
+                  </div>
+                  <div class="report-evidence-image" *ngIf="previsualizaciones['COLA']">
+                    <img [src]="previsualizaciones['COLA']" alt="Vista previa de evidencia de tamaño de cola">
+                    <span class="report-evidence-ready">✓ Imagen lista</span>
+                  </div>
+                  <div class="report-evidence-controls">
+                    <label class="report-evidence-file" (click)="$event.stopPropagation();activarPegado('COLA')">
+                      <span aria-hidden="true">＋</span> {{previsualizaciones['COLA']?'Cambiar foto':'Seleccionar archivo'}}
+                      <input type="file" accept="image/jpeg,image/png,image/webp"
+                        (change)="seleccionarArchivo($event,'COLA')">
+                    </label>
+                    <span class="report-evidence-shortcut" *ngIf="!previsualizaciones['COLA']">
+                      <strong>Ctrl+V / Cmd+V</strong>
+                      <small>para pegar aquí</small>
+                    </span>
+                    <button type="button" class="report-evidence-remove"
+                      *ngIf="previsualizaciones['COLA']"
+                      (click)="$event.stopPropagation();quitarFoto('COLA')">× Quitar</button>
+                  </div>
+                  <small class="report-evidence-hint">JPG · PNG · WEBP · máximo 4 MB</small>
+                </div>
+              </article>
             </div>
           </section>
 
