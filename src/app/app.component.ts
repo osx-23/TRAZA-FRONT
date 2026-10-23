@@ -3,9 +3,9 @@ import { Component, OnDestroy, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { Evento, Evidencia, Estadisticas, TrazaService } from './traza.service';
+import { Evento, Evidencia, Estadisticas, TrazaService, ViaPlaza } from './traza.service';
 
-type Seccion='dashboard'|'incidencias'|'colas'|'historial'|'analisis'|'evidencias';
+type Seccion='dashboard'|'incidencias'|'colas'|'historial'|'analisis'|'evidencias'|'vias';
 @Component({selector:'app-root',standalone:true,imports:[CommonModule,FormsModule],templateUrl:'./app.component.html'})
 export class AppComponent implements OnDestroy {
   private api=inject(TrazaService);
@@ -20,6 +20,13 @@ export class AppComponent implements OnDestroy {
   evidencias:Evidencia[]=[];
   stats:Estadisticas|null=null;
   plazas:{codigo:string;nombre:string}[]=[];
+  viasDisponibles:ViaPlaza[]=[];
+  cargandoVias=false;
+  plazaGestion='P4';
+  viasGestion:ViaPlaza[]=[];
+  desdeVia:number|null=101;
+  hastaVia:number|null=105;
+  gestionandoVias=false;
   filtros={tipo:'',plaza:'',desde:'',hasta:''};
   fotos:Record<string,File|undefined>={};
   previsualizaciones:Record<string,string>={};
@@ -31,7 +38,8 @@ export class AppComponent implements OnDestroy {
     {key:'colas',titulo:'Medición de colas',icono:'↗'},
     {key:'historial',titulo:'Historial',icono:'▤'},
     {key:'analisis',titulo:'Análisis',icono:'▥'},
-    {key:'evidencias',titulo:'Evidencias',icono:'▧'}
+    {key:'evidencias',titulo:'Evidencias',icono:'▧'},
+    {key:'vias',titulo:'Vías por plaza',icono:'⚙'}
   ];
   readonly situaciones=['Fluida','Tráfico moderado','Congestionada','Tráfico en contra','Tráfico detenido','Otro'];
   readonly ingresos=['Con motorizado','Sin motorizado','Motorizado en camino','Ingreso restringido','Sin novedad'];
@@ -45,6 +53,7 @@ export class AppComponent implements OnDestroy {
   get maxDiario(){return Math.max(1,...(this.stats?.diario.map(d=>Number(d.total))||[]));}
   get maxPlaza(){return Math.max(1,...(this.stats?.plazas.map(d=>Number(d.total))||[]));}
   get mediaCola(){return Number(this.stats?.kpi.promedioCola||0);}
+  get totalFotos(){return Object.values(this.fotos).filter(Boolean).length;}
   hoy(){
     const d=new Date(),pad=(n:number)=>String(n).padStart(2,'0');
     return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
@@ -75,16 +84,74 @@ export class AppComponent implements OnDestroy {
       const [catalogos,estadisticas,eventos]=await Promise.all([
         firstValueFrom(this.api.catalogos()),firstValueFrom(this.api.estadisticas()),firstValueFrom(this.api.listar())]);
       this.plazas=catalogos.plazas;this.stats=estadisticas;this.eventos=eventos;
+      await this.cargarViasFormulario();
     }catch(e){this.error=this.errorHttp(e);}
     finally{this.cargando=false;}
   }
   navegar(s:Seccion){
     this.seccion=s;this.menuOpen=false;this.error='';this.exito='';
-    if(s==='incidencias'){this.form=this.nuevoFormulario('INCIDENCIA');this.limpiarFotos();}
-    if(s==='colas'){this.form=this.nuevoFormulario('MEDICION');this.limpiarFotos();}
+    if(s==='incidencias'){this.form=this.nuevoFormulario('INCIDENCIA');this.limpiarFotos();this.cargarViasFormulario();}
+    if(s==='colas'){this.form=this.nuevoFormulario('MEDICION');this.limpiarFotos();this.cargarViasFormulario();}
+    if(s==='vias' && this.supervisor)this.cargarViasGestion();
     if(s==='historial')this.cargarEventos();
     if(s==='analisis'||s==='dashboard')this.cargarEstadisticas();
     if(s==='evidencias')this.cargarEvidencias();
+  }
+  cambiarPlazaRegistro(){
+    this.form.via='';
+    this.cargarViasFormulario();
+  }
+  async cargarViasFormulario(){
+    const plaza=this.form.plazaCodigo;
+    this.viasDisponibles=[];
+    this.cargandoVias=true;
+    try {
+      const vias=await firstValueFrom(this.api.viasDePlaza(plaza));
+      if(this.form.plazaCodigo===plaza)this.viasDisponibles=vias;
+    } catch(e){
+      if(this.form.plazaCodigo===plaza)this.error='No se pudieron consultar las vías de esta plaza.';
+    } finally {
+      if(this.form.plazaCodigo===plaza)this.cargandoVias=false;
+    }
+  }
+  async cargarViasGestion(){
+    if(!this.supervisor)return;
+    const plaza=this.plazaGestion;
+    this.gestionandoVias=true;
+    try{
+      const vias=await firstValueFrom(this.api.viasDePlaza(plaza));
+      if(this.plazaGestion===plaza)this.viasGestion=vias;
+    }catch(e){
+      if(this.plazaGestion===plaza)this.error=this.errorHttp(e);
+    }finally{if(this.plazaGestion===plaza)this.gestionandoVias=false;}
+  }
+  async asignarRangoVias(){
+    if(!this.supervisor)return;
+    const desde=Number(this.desdeVia),hasta=Number(this.hastaVia);
+    if(!Number.isInteger(desde)||!Number.isInteger(hasta)||desde<1||hasta<desde||hasta>999999||hasta-desde>99){
+      this.error='Indica un rango válido (máximo 100 vías por operación).';return;
+    }
+    this.gestionandoVias=true;this.error='';this.exito='';
+    try {
+      this.viasGestion=await firstValueFrom(this.api.asignarVias(this.plazaGestion,desde,hasta));
+      this.exito='Vías '+desde+(desde===hasta?'':' a '+hasta)+' asignadas a '+this.plazaGestion+'.';
+      if(this.form.plazaCodigo===this.plazaGestion)await this.cargarViasFormulario();
+    }catch(e){this.error=this.errorHttp(e);}
+    finally{this.gestionandoVias=false;}
+  }
+  async quitarViaGestion(numero:string){
+    if(!this.supervisor||!window.confirm('¿Desactivar la vía '+numero+' de '+this.plazaGestion+'? Los registros históricos se conservarán.'))return;
+    this.gestionandoVias=true;this.error='';this.exito='';
+    try {
+      await firstValueFrom(this.api.desactivarVia(this.plazaGestion,numero));
+      this.viasGestion=this.viasGestion.filter(v=>v.numero!==numero);
+      this.exito='Vía '+numero+' desactivada en '+this.plazaGestion+'.';
+      if(this.form.plazaCodigo===this.plazaGestion){
+        if(this.form.via===numero)this.form.via='';
+        await this.cargarViasFormulario();
+      }
+    }catch(e){this.error=this.errorHttp(e);}
+    finally{this.gestionandoVias=false;}
   }
   async cargarEventos(){
     this.cargando=true;this.error='';
@@ -154,6 +221,7 @@ export class AppComponent implements OnDestroy {
   reiniciarFormulario(){
     this.form=this.nuevoFormulario(this.form.tipo);
     this.limpiarFotos();
+    this.cargarViasFormulario();
     this.error='';
   }
   async guardar(){
@@ -185,6 +253,7 @@ export class AppComponent implements OnDestroy {
       } else {
         this.limpiarFotos();
         this.form=this.nuevoFormulario(result.tipo);
+        this.cargarViasFormulario();
         this.exito='Registro y fotografías guardados correctamente.';
       }
       await Promise.all([this.cargarEstadisticas(),this.cargarEventos()]);
@@ -194,6 +263,7 @@ export class AppComponent implements OnDestroy {
   editar(e:Evento){
     this.form={...e};this.limpiarFotos();this.error='';this.exito='';
     this.seccion=e.tipo==='MEDICION'?'colas':'incidencias';this.menuOpen=false;
+    this.cargarViasFormulario();
     window.scrollTo({top:0,behavior:'smooth'});
   }
   async eliminar(e:Evento){
