@@ -1,0 +1,143 @@
+<div class="login-screen" *ngIf="!autenticado">
+  <div class="login-card">
+    <div class="brand-logo"><span class="logo">◭</span><span><strong>TRAZA</strong><small>CONTROL DE TRÁFICO</small></span></div>
+    <div class="login-icon">↗</div>
+    <h1>Bienvenido a TRAZA</h1><p>Accede al monitoreo y reporte de tráfico de las plazas de peaje.</p>
+    <form (ngSubmit)="login()">
+      <label>Usuario<input type="text" name="usuario" [(ngModel)]="loginUser" autocomplete="username" placeholder="Tu usuario" required></label>
+      <label>Contraseña<input type="password" name="clave" [(ngModel)]="loginPass" autocomplete="current-password" placeholder="Tu contraseña" required></label>
+      <div class="alert error" *ngIf="error">{{error}}</div>
+      <button class="btn primary full" type="submit" [disabled]="loginLoading">{{loginLoading?'Ingresando…':'Iniciar sesión →'}}</button>
+    </form>
+    <small class="muted">Acceso seguro · TRAZA</small>
+  </div>
+</div>
+
+<div class="app-shell" *ngIf="autenticado">
+  <aside class="sidebar" [class.open]="menuOpen">
+    <div class="brand-logo"><span class="logo">◭</span><span><strong>TRAZA</strong><small>CONTROL DE TRÁFICO</small></span></div>
+    <div class="sidebar-label">OPERACIONES</div>
+    <nav>
+      <button *ngFor="let item of secciones" class="nav-item" [class.active]="seccion===item.key" (click)="navegar(item.key)">
+        <span class="nav-icon">{{item.icono}}</span>{{item.titulo}}
+        <span *ngIf="seccion===item.key" class="nav-dot"></span>
+      </button>
+    </nav>
+    <div class="sidebar-bottom"><span class="online-pip"></span>Sistema de operaciones<span class="version">v0.1</span></div>
+  </aside>
+  <div class="backdrop" *ngIf="menuOpen" (click)="menuOpen=false"></div>
+  <div class="main-area">
+    <header class="topbar">
+      <button class="menu-toggle" (click)="menuOpen=!menuOpen">☰</button>
+      <span class="crumb">Operaciones <span>/</span> <b>{{titulo}}</b></span>
+      <div class="topright"><span class="top-status"><i></i> En línea</span>
+        <span class="avatar">{{usuario.slice(0,1).toUpperCase()}}</span><span class="account"><b>{{usuario}}</b><small>{{rol}}</small></span>
+        <button class="icon-btn" title="Cerrar sesión" (click)="logout()">⇥</button>
+      </div>
+    </header>
+    <main class="content">
+      <div class="alert error" *ngIf="error">{{error}} <button (click)="error=''">×</button></div>
+      <div class="alert ok" *ngIf="exito">{{exito}} <button (click)="exito=''">×</button></div>
+
+      <ng-container *ngIf="seccion==='dashboard'">
+        <div class="page-heading"><div><div class="eyebrow">RESUMEN OPERATIVO</div><h1>Panel de control</h1><p>Indicadores consolidados de tráfico e incidencias registradas.</p></div><button class="btn outline" (click)="inicializar()">↻ Actualizar</button></div>
+        <div class="kpi-grid">
+          <div class="kpi"><div class="kpi-top"><span>INCIDENCIAS</span><span class="kicon blue">⚠</span></div><strong>{{stats?.kpi?.incidencias || 0}}</strong><small>Registros de incidencias</small></div>
+          <div class="kpi"><div class="kpi-top"><span>MEDICIONES DE COLA</span><span class="kicon cyan">↗</span></div><strong>{{stats?.kpi?.mediciones || 0}}</strong><small>Mediciones registradas</small></div>
+          <div class="kpi"><div class="kpi-top"><span>COLA MÁXIMA</span><span class="kicon amber">▥</span></div><strong>{{stats?.kpi?.maxCola || 0}} <em>m</em></strong><small>Mayor longitud registrada</small></div>
+          <div class="kpi"><div class="kpi-top"><span>COLA PROMEDIO</span><span class="kicon violet">≋</span></div><strong>{{mediaCola}} <em>m</em></strong><small>Registros con cola informada</small></div>
+        </div>
+        <div class="two-cols">
+          <section class="panel"><div class="panel-heading"><div><h2>Actividad diaria</h2><p>Registros en los últimos 14 días</p></div><span class="chip">Diario</span></div>
+            <div class="bars" *ngIf="stats?.diario?.length;else vacioChart"><div class="barcol" *ngFor="let d of stats?.diario" [title]="d.fecha+': '+d.total+' registros'"><span>{{d.total}}</span><div [style.height.%]="100* d.total/maxDiario"></div><small>{{d.fecha.slice(5)}}</small></div></div>
+            <ng-template #vacioChart><div class="empty compact">No hay datos para graficar todavía.</div></ng-template>
+          </section>
+          <section class="panel"><div class="panel-heading"><div><h2>Actividad por plaza</h2><p>Distribución acumulada de registros</p></div></div>
+            <div class="plaza-bars" *ngFor="let p of stats?.plazas"><span>{{p.plaza}}</span><div class="track"><div [style.width.%]="100*p.total/maxPlaza"></div></div><b>{{p.total}}</b></div>
+          </section>
+        </div>
+        <section class="panel"><div class="panel-heading"><div><h2>Últimos registros</h2><p>Eventos incorporados recientemente</p></div><button class="btn link" (click)="navegar('historial')">Ver historial →</button></div>
+          <div class="table-wrap"><table><thead><tr><th>TIPO</th><th>PLAZA</th><th>FECHA / HORA</th><th>DETALLE</th><th>COLA</th><th>ESTADO</th></tr></thead><tbody>
+          <tr *ngFor="let e of stats?.recientes"><td><span class="pill" [class.warning]="e.tipo==='INCIDENCIA'">{{e.tipo==='INCIDENCIA'?'Incidencia':'Medición'}}</span></td><td><b>{{e.plazaCodigo}}</b></td><td>{{e.fecha}} · {{e.hora}}</td><td>{{e.incidente||e.situacion||e.descripcion||'—'}}</td><td>{{e.colaMetros===null?'—':e.colaMetros+' m'}}</td><td>{{e.estado}}</td></tr>
+          <tr *ngIf="!stats?.recientes?.length"><td colspan="6" class="empty">No hay registros todavía.</td></tr></tbody></table></div>
+        </section>
+      </ng-container>
+
+      <ng-container *ngIf="seccion==='incidencias'||seccion==='colas'">
+        <div class="page-heading"><div><div class="eyebrow">{{form.id?'EDITAR REGISTRO':'REGISTRO OPERATIVO'}}</div><h1>{{seccion==='incidencias'?'Nueva incidencia':'Medición de cola'}}</h1><p>{{seccion==='incidencias'?'Reporta la situación actual, incidencias e ingreso de motorizados.':'Registra la longitud observada de la cola vehicular.'}}</p></div><span class="soft-tag">{{seccion==='incidencias'?'Incidencia':'Medición'}}</span></div>
+        <form (ngSubmit)="guardar()">
+          <section class="panel form-panel"><div class="panel-heading"><div><h2>Información del registro</h2><p>Datos generales de la operación</p></div><span class="required-label">* Campos obligatorios</span></div>
+            <div class="form-grid">
+              <label>Plaza *<select name="plaza" [(ngModel)]="form.plazaCodigo" required><option *ngFor="let p of plazas" [value]="p.codigo">{{p.nombre}}</option></select></label>
+              <label>Turno *<select name="turno" [(ngModel)]="form.turno" required><option value="A">Turno A</option><option value="B">Turno B</option><option value="C">Turno C</option></select></label>
+              <label>Vía / referencia<input name="via" type="text" maxlength="60" [(ngModel)]="form.via" placeholder="Ej. 151 o Plaza general"></label>
+              <label>Fecha *<input name="fecha" type="date" [(ngModel)]="form.fecha" required></label>
+              <label>Hora *<input name="hora" type="time" [(ngModel)]="form.hora" required></label>
+              <label>Estado<select name="estado" [(ngModel)]="form.estado"><option value="REGISTRADO">Registrado</option><option value="EN_OBSERVACION">En observación</option><option value="ATENDIDO">Atendido</option></select></label>
+            </div>
+          </section>
+          <section class="panel form-panel"><div class="panel-heading"><div><h2>Detalle {{seccion==='incidencias'?'de la incidencia':'de la medición'}}</h2><p>Condiciones observadas en la plaza</p></div></div>
+            <div class="detail-grid">
+              <div class="detail-card"><div class="detail-head"><span class="num">01</span><div><h3>Situación de la plaza</h3><p>Estado general del tránsito</p></div></div>
+                <label>Situación<select name="situacion" [(ngModel)]="form.situacion"><option value="">Seleccionar situación</option><option *ngFor="let s of situaciones" [value]="s">{{s}}</option></select></label>
+                <label class="upload">📷 Adjuntar fotografía<input type="file" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'PLAZA')"><small>{{fotos['PLAZA']?.name||'Sin fotografía seleccionada'}}</small></label>
+              </div>
+              <div class="detail-card"><div class="detail-head"><span class="num">02</span><div><h3>Ingreso</h3><p>Presencia de motorizado</p></div></div>
+                <label>Estado de ingreso<select name="ingreso" [(ngModel)]="form.ingreso"><option value="">Seleccionar ingreso</option><option *ngFor="let s of ingresos" [value]="s">{{s}}</option></select></label>
+                <label class="upload">📷 Adjuntar fotografía<input type="file" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'INGRESO')"><small>{{fotos['INGRESO']?.name||'Sin fotografía seleccionada'}}</small></label>
+              </div>
+              <div class="detail-card"><div class="detail-head"><span class="num">03</span><div><h3>Incidente</h3><p>Eventos especiales reportados</p></div></div>
+                <label>Tipo de incidente<select name="incidente" [(ngModel)]="form.incidente"><option value="">Seleccionar incidente</option><option *ngFor="let s of incidentes" [value]="s">{{s}}</option></select></label>
+                <label class="upload">📷 Adjuntar fotografía<input type="file" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'INCIDENTE')"><small>{{fotos['INCIDENTE']?.name||'Sin fotografía seleccionada'}}</small></label>
+              </div>
+              <div class="detail-card"><div class="detail-head"><span class="num">04</span><div><h3>Tamaño de cola</h3><p>Longitud vehicular estimada</p></div></div>
+                <label>Metros {{form.tipo==='MEDICION'?'*':''}}<div class="input-unit"><input name="cola" type="number" min="0" max="50000" [(ngModel)]="form.colaMetros" placeholder="Ej. 400"><span>metros</span></div></label>
+                <label class="upload">📷 Adjuntar fotografía<input type="file" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'COLA')"><small>{{fotos['COLA']?.name||'Sin fotografía seleccionada'}}</small></label>
+              </div>
+            </div>
+            <label class="description">Observaciones adicionales<textarea rows="4" name="descripcion" [(ngModel)]="form.descripcion" placeholder="Describe brevemente el contexto del evento…"></textarea></label>
+          </section>
+          <div class="actions"><button type="button" class="btn outline" (click)="form=nuevoFormulario(form.tipo);fotos={}">Limpiar formulario</button><button type="submit" class="btn primary" [disabled]="guardando">{{guardando?'Guardando…':(form.id?'Guardar cambios':'Guardar registro')}} →</button></div>
+        </form>
+      </ng-container>
+
+      <ng-container *ngIf="seccion==='historial'">
+        <div class="page-heading"><div><div class="eyebrow">CONSULTA OPERATIVA</div><h1>Historial de registros</h1><p>Filtra, consulta y exporta las incidencias y mediciones.</p></div><div class="actions"><button class="btn outline" (click)="exportar('csv')">↓ CSV</button><button class="btn outline" (click)="exportar('json')">↓ JSON</button></div></div>
+        <section class="panel"><div class="filter-grid">
+          <label>Tipo<select name="f-tipo" [(ngModel)]="filtros.tipo"><option value="">Todos</option><option value="INCIDENCIA">Incidencias</option><option value="MEDICION">Mediciones</option></select></label>
+          <label>Plaza<select name="f-plaza" [(ngModel)]="filtros.plaza"><option value="">Todas</option><option *ngFor="let p of plazas" [value]="p.codigo">{{p.nombre}}</option></select></label>
+          <label>Desde<input type="date" name="f-desde" [(ngModel)]="filtros.desde"></label><label>Hasta<input type="date" name="f-hasta" [(ngModel)]="filtros.hasta"></label>
+          <div class="filter-actions"><button class="btn primary" (click)="cargarEventos()">Filtrar</button><button class="btn outline" (click)="limpiarFiltros()">Limpiar</button></div>
+        </div></section>
+        <section class="panel"><div class="panel-heading"><h2>Resultados <span class="count">{{eventos.length}}</span></h2><span class="muted">Máximo 500 registros por consulta</span></div>
+        <div class="table-wrap"><table><thead><tr><th>TIPO</th><th>PLAZA / VÍA</th><th>FECHA / HORA</th><th>SITUACIÓN</th><th>INCIDENTE</th><th>COLA</th><th>ESTADO</th><th>ACCIONES</th></tr></thead>
+          <tbody><tr *ngFor="let e of eventos"><td><span class="pill" [class.warning]="e.tipo==='INCIDENCIA'">{{e.tipo==='INCIDENCIA'?'Incidencia':'Medición'}}</span></td><td><b>{{e.plazaCodigo}}</b><small class="block">{{e.via||'General'}}</small></td><td>{{e.fecha}}<small class="block">{{e.hora}}</small></td><td>{{e.situacion||'—'}}</td><td>{{e.incidente||'—'}}</td><td><b>{{e.colaMetros===null?'—':e.colaMetros+' m'}}</b></td><td><span class="status">{{e.estado}}</span></td><td class="row-actions"><button class="btn tiny outline" (click)="editar(e)">Editar</button><button *ngIf="supervisor" class="btn tiny danger" (click)="eliminar(e)">Borrar</button></td></tr>
+            <tr *ngIf="!eventos.length"><td colspan="8" class="empty">No se encontraron registros.</td></tr></tbody></table></div></section>
+      </ng-container>
+
+      <ng-container *ngIf="seccion==='analisis'">
+        <div class="page-heading"><div><div class="eyebrow">ESTADÍSTICAS</div><h1>Análisis de tráfico</h1><p>Comparativo de incidentes y longitudes de cola por plaza.</p></div><button class="btn outline" (click)="cargarEstadisticas()">↻ Actualizar</button></div>
+        <div class="kpi-grid"><div class="kpi"><span>TOTAL REGISTROS</span><strong>{{stats?.kpi?.total||0}}</strong></div><div class="kpi"><span>INCIDENCIAS</span><strong>{{stats?.kpi?.incidencias||0}}</strong></div><div class="kpi"><span>MEDICIONES</span><strong>{{stats?.kpi?.mediciones||0}}</strong></div><div class="kpi"><span>COLA MÁXIMA</span><strong>{{stats?.kpi?.maxCola||0}} <em>m</em></strong></div></div>
+        <section class="panel"><div class="panel-heading"><div><h2>Comparativo por plaza</h2><p>Registros, incidencias y cola máxima acumulados</p></div></div>
+          <div class="table-wrap"><table><thead><tr><th>PLAZA</th><th>REGISTROS</th><th>INCIDENCIAS</th><th>COLA MÁXIMA</th><th>DISTRIBUCIÓN</th></tr></thead><tbody><tr *ngFor="let p of stats?.plazas"><td><b>{{p.plaza}}</b></td><td>{{p.total}}</td><td>{{p.incidencias}}</td><td>{{p.maxCola}} m</td><td><div class="track"><div [style.width.%]="100*p.total/maxPlaza"></div></div></td></tr></tbody></table></div>
+        </section>
+        <section class="panel"><div class="panel-heading"><h2>Evolución diaria</h2></div><div class="table-wrap"><table><thead><tr><th>FECHA</th><th>REGISTROS</th><th>COLA MÁXIMA</th></tr></thead><tbody><tr *ngFor="let d of stats?.diario"><td>{{d.fecha}}</td><td>{{d.total}}</td><td>{{d.maxCola}} m</td></tr><tr *ngIf="!stats?.diario?.length"><td colspan="3" class="empty">Sin datos para los últimos 14 días.</td></tr></tbody></table></div></section>
+      </ng-container>
+
+      <ng-container *ngIf="seccion==='evidencias'">
+        <div class="page-heading"><div><div class="eyebrow">ARCHIVO FOTOGRÁFICO</div><h1>Evidencias</h1><p>Fotografías asociadas a los registros: plaza, ingreso, incidente y cola.</p></div><button class="btn outline" (click)="cargarEvidencias()">↻ Actualizar</button></div>
+        <div class="evidence-grid" *ngIf="evidencias.length;else sinEvidencias">
+          <div class="evidence-card" *ngFor="let e of evidencias"><div class="evidence-pic">
+            <img *ngIf="urls[e.id]" [src]="urls[e.id]" [alt]="e.categoria+' '+e.plaza">
+            <div class="loading-img" *ngIf="!urls[e.id]">▧ <button class="btn tiny outline" (click)="cargarImagen(e.id)">Cargar imagen</button></div>
+            <span class="photo-cat">{{e.categoria}}</span></div>
+            <div class="evidence-info"><b>{{e.plaza}} · {{e.fecha}}</b><small>{{e.nombre}}</small><div class="evidence-actions"><button class="btn tiny outline" (click)="editarDesdeEvidencia(e)">Ver registro</button><button class="btn tiny danger" *ngIf="supervisor" (click)="eliminarFoto(e)">Eliminar</button></div></div>
+          </div>
+        </div>
+        <ng-template #sinEvidencias><section class="panel empty">Todavía no se han adjuntado fotografías.</section></ng-template>
+      </ng-container>
+
+      <footer>TRAZA · Sistema de gestión de tráfico <span>Los datos se guardan en Supabase a través de la API</span></footer>
+    </main>
+  </div>
+</div>
