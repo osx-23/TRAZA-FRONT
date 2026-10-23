@@ -167,13 +167,26 @@ export class AppComponent implements OnDestroy {
     try{
       const result=await firstValueFrom(this.form.id?this.api.editar(this.form.id,this.form):this.api.crear(this.form));
       const fotos=Object.entries(this.fotos).filter(([,file])=>!!file);
-      let fallidas=0;
+      const fallidas:string[]=[];
       for(const [categoria,file] of fotos){
-        try{await firstValueFrom(this.api.subir(result.id!,categoria,file!));}
-        catch{fallidas++;}
+        try {
+          await firstValueFrom(this.api.subir(result.id!,categoria,file!));
+          // Evita volver a subir fotos que ya se guardaron correctamente.
+          this.quitarFoto(categoria);
+        } catch {
+          fallidas.push(categoria);
+        }
       }
-      this.limpiarFotos();this.form=this.nuevoFormulario(result.tipo);
-      this.exito=fallidas?('Registro guardado, pero '+fallidas+' fotografía(s) no se subieron. Revisa evidencias.'):'Registro guardado correctamente.';
+      if(fallidas.length){
+        // Conservar el registro y las fotografías fallidas para reintentar el envío.
+        this.form={...result};
+        this.error='Registro guardado, pero no se pudieron subir '+fallidas.length+
+          ' fotografía(s). Conservamos las imágenes. Comprueba la configuración de Storage y pulsa Guardar cambios para reintentarlo.';
+      } else {
+        this.limpiarFotos();
+        this.form=this.nuevoFormulario(result.tipo);
+        this.exito='Registro y fotografías guardados correctamente.';
+      }
       await Promise.all([this.cargarEstadisticas(),this.cargarEventos()]);
     }catch(e){this.error=this.errorHttp(e);}
     finally{this.guardando=false;}
