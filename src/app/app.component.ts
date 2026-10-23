@@ -22,6 +22,7 @@ export class AppComponent implements OnDestroy {
   plazas:{codigo:string;nombre:string}[]=[];
   filtros={tipo:'',plaza:'',desde:'',hasta:''};
   fotos:Record<string,File|undefined>={};
+  previsualizaciones:Record<string,string>={};
   urls:Record<string,string>={};
   form:Evento=this.nuevoFormulario('INCIDENCIA');
   readonly secciones:{key:Seccion;titulo:string;icono:string}[]=[
@@ -66,6 +67,7 @@ export class AppComponent implements OnDestroy {
     finally{this.loginLoading=false;}
   }
   logout(){sessionStorage.removeItem('traza_token');sessionStorage.removeItem('traza_nombre');sessionStorage.removeItem('traza_rol');
+    this.limpiarFotos();
     this.token='';this.usuario='';this.rol='';this.eventos=[];this.evidencias=[];this.stats=null;this.error='';}
   async inicializar(){
     this.cargando=true;this.error='';
@@ -78,8 +80,8 @@ export class AppComponent implements OnDestroy {
   }
   navegar(s:Seccion){
     this.seccion=s;this.menuOpen=false;this.error='';this.exito='';
-    if(s==='incidencias'){this.form=this.nuevoFormulario('INCIDENCIA');this.fotos={};}
-    if(s==='colas'){this.form=this.nuevoFormulario('MEDICION');this.fotos={};}
+    if(s==='incidencias'){this.form=this.nuevoFormulario('INCIDENCIA');this.limpiarFotos();}
+    if(s==='colas'){this.form=this.nuevoFormulario('MEDICION');this.limpiarFotos();}
     if(s==='historial')this.cargarEventos();
     if(s==='analisis'||s==='dashboard')this.cargarEstadisticas();
     if(s==='evidencias')this.cargarEvidencias();
@@ -105,13 +107,54 @@ export class AppComponent implements OnDestroy {
     this.api.foto(id).subscribe({next:b=>this.urls[id]=URL.createObjectURL(b),error:()=>{}});
   }
   seleccionarArchivo(event:Event,categoria:string){
-    const input=event.target as HTMLInputElement;const file=input.files?.item(0);
-    if(!file){delete this.fotos[categoria];return;}
-    if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>4000000){
-      this.error='Las fotografías deben ser JPG, PNG o WebP y pesar menos de 4 MB.';
-      input.value='';return;
+    const input=event.target as HTMLInputElement;
+    const file=input.files?.item(0);
+    input.value='';
+    if(file)this.agregarFoto(file,categoria);
+  }
+  pegarArchivo(event:ClipboardEvent,categoria:string){
+    const items=Array.from(event.clipboardData?.items ?? []);
+    const imagen=items.find(item=>item.kind==='file' && item.type.startsWith('image/'))?.getAsFile()
+      ?? Array.from(event.clipboardData?.files ?? []).find(file=>file.type.startsWith('image/'));
+    if(!imagen){
+      this.error='No hay una imagen en el portapapeles. Copia una captura o fotografía y vuelve a intentarlo.';
+      return;
     }
-    this.fotos[categoria]=file;this.error='';
+    event.preventDefault();
+    const extension=imagen.type==='image/jpeg'?'jpg':imagen.type==='image/webp'?'webp':'png';
+    const archivo=new File([imagen],categoria.toLowerCase()+'-pegada-'+Date.now()+'.'+extension,
+      {type:imagen.type,lastModified:Date.now()});
+    this.agregarFoto(archivo,categoria);
+  }
+  private agregarFoto(archivo:File,categoria:string){
+    if(!['image/jpeg','image/png','image/webp'].includes(archivo.type)){
+      this.error='Solo se permiten imágenes JPG, PNG o WebP.';
+      return;
+    }
+    if(archivo.size===0||archivo.size>4000000){
+      this.error='Cada fotografía debe pesar como máximo 4 MB.';
+      return;
+    }
+    if(this.previsualizaciones[categoria])URL.revokeObjectURL(this.previsualizaciones[categoria]);
+    this.fotos[categoria]=archivo;
+    this.previsualizaciones[categoria]=URL.createObjectURL(archivo);
+    this.error='';
+    this.exito='';
+  }
+  quitarFoto(categoria:string){
+    if(this.previsualizaciones[categoria])URL.revokeObjectURL(this.previsualizaciones[categoria]);
+    delete this.previsualizaciones[categoria];
+    delete this.fotos[categoria];
+  }
+  private limpiarFotos(){
+    Object.values(this.previsualizaciones).forEach(url=>URL.revokeObjectURL(url));
+    this.previsualizaciones={};
+    this.fotos={};
+  }
+  reiniciarFormulario(){
+    this.form=this.nuevoFormulario(this.form.tipo);
+    this.limpiarFotos();
+    this.error='';
   }
   async guardar(){
     if(!this.form.plazaCodigo||!this.form.fecha||!this.form.hora||!this.form.turno){
@@ -129,14 +172,14 @@ export class AppComponent implements OnDestroy {
         try{await firstValueFrom(this.api.subir(result.id!,categoria,file!));}
         catch{fallidas++;}
       }
-      this.fotos={};this.form=this.nuevoFormulario(result.tipo);
+      this.limpiarFotos();this.form=this.nuevoFormulario(result.tipo);
       this.exito=fallidas?('Registro guardado, pero '+fallidas+' fotografía(s) no se subieron. Revisa evidencias.'):'Registro guardado correctamente.';
       await Promise.all([this.cargarEstadisticas(),this.cargarEventos()]);
     }catch(e){this.error=this.errorHttp(e);}
     finally{this.guardando=false;}
   }
   editar(e:Evento){
-    this.form={...e};this.fotos={};this.error='';this.exito='';
+    this.form={...e};this.limpiarFotos();this.error='';this.exito='';
     this.seccion=e.tipo==='MEDICION'?'colas':'incidencias';this.menuOpen=false;
     window.scrollTo({top:0,behavior:'smooth'});
   }
@@ -182,5 +225,5 @@ export class AppComponent implements OnDestroy {
     }
     return 'Ocurrió un error inesperado.';
   }
-  ngOnDestroy(){Object.values(this.urls).forEach(u=>URL.revokeObjectURL(u));}
+  ngOnDestroy(){this.limpiarFotos();Object.values(this.urls).forEach(u=>URL.revokeObjectURL(u));}
 }
