@@ -80,24 +80,52 @@
             <div class="detail-grid">
               <div class="detail-card"><div class="detail-head"><span class="num">01</span><div><h3>Situación de la plaza</h3><p>Estado general del tránsito</p></div></div>
                 <label>Situación<select name="situacion" [(ngModel)]="form.situacion"><option value="">Seleccionar situación</option><option *ngFor="let s of situaciones" [value]="s">{{s}}</option></select></label>
-                <label class="upload">📷 Adjuntar fotografía<input type="file" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'PLAZA')"><small>{{fotos['PLAZA']?.name||'Sin fotografía seleccionada'}}</small></label>
+                <div class="photo-controls">
+                  <label class="upload">📷 Adjuntar fotografía<input type="file" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'PLAZA')"><small>{{fotos['PLAZA']?.name||'Sin fotografía seleccionada'}}</small></label>
+                  <button type="button" class="paste-target" (paste)="pegarArchivo($event,'PLAZA')" title="Haz clic y pega una imagen con Ctrl+V o Cmd+V">⌨ Pegar imagen aquí <small>Haz clic y presiona Ctrl+V o Cmd+V</small></button>
+                  <div class="photo-preview" *ngIf="previsualizaciones['PLAZA']">
+                    <img [src]="previsualizaciones['PLAZA']" alt="Vista previa de la fotografía de la plaza">
+                    <button type="button" class="remove-photo" (click)="quitarFoto('PLAZA')">× Quitar fotografía</button>
+                  </div>
+                </div>
               </div>
               <div class="detail-card"><div class="detail-head"><span class="num">02</span><div><h3>Ingreso</h3><p>Presencia de motorizado</p></div></div>
                 <label>Estado de ingreso<select name="ingreso" [(ngModel)]="form.ingreso"><option value="">Seleccionar ingreso</option><option *ngFor="let s of ingresos" [value]="s">{{s}}</option></select></label>
-                <label class="upload">📷 Adjuntar fotografía<input type="file" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'INGRESO')"><small>{{fotos['INGRESO']?.name||'Sin fotografía seleccionada'}}</small></label>
+                <div class="photo-controls">
+                  <label class="upload">📷 Adjuntar fotografía<input type="file" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'INGRESO')"><small>{{fotos['INGRESO']?.name||'Sin fotografía seleccionada'}}</small></label>
+                  <button type="button" class="paste-target" (paste)="pegarArchivo($event,'INGRESO')" title="Haz clic y pega una imagen con Ctrl+V o Cmd+V">⌨ Pegar imagen aquí <small>Haz clic y presiona Ctrl+V o Cmd+V</small></button>
+                  <div class="photo-preview" *ngIf="previsualizaciones['INGRESO']">
+                    <img [src]="previsualizaciones['INGRESO']" alt="Vista previa de la fotografía de ingreso">
+                    <button type="button" class="remove-photo" (click)="quitarFoto('INGRESO')">× Quitar fotografía</button>
+                  </div>
+                </div>
               </div>
               <div class="detail-card"><div class="detail-head"><span class="num">03</span><div><h3>Incidente</h3><p>Eventos especiales reportados</p></div></div>
                 <label>Tipo de incidente<select name="incidente" [(ngModel)]="form.incidente"><option value="">Seleccionar incidente</option><option *ngFor="let s of incidentes" [value]="s">{{s}}</option></select></label>
-                <label class="upload">📷 Adjuntar fotografía<input type="file" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'INCIDENTE')"><small>{{fotos['INCIDENTE']?.name||'Sin fotografía seleccionada'}}</small></label>
+                <div class="photo-controls">
+                  <label class="upload">📷 Adjuntar fotografía<input type="file" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'INCIDENTE')"><small>{{fotos['INCIDENTE']?.name||'Sin fotografía seleccionada'}}</small></label>
+                  <button type="button" class="paste-target" (paste)="pegarArchivo($event,'INCIDENTE')" title="Haz clic y pega una imagen con Ctrl+V o Cmd+V">⌨ Pegar imagen aquí <small>Haz clic y presiona Ctrl+V o Cmd+V</small></button>
+                  <div class="photo-preview" *ngIf="previsualizaciones['INCIDENTE']">
+                    <img [src]="previsualizaciones['INCIDENTE']" alt="Vista previa de la fotografía de incidente">
+                    <button type="button" class="remove-photo" (click)="quitarFoto('INCIDENTE')">× Quitar fotografía</button>
+                  </div>
+                </div>
               </div>
               <div class="detail-card"><div class="detail-head"><span class="num">04</span><div><h3>Tamaño de cola</h3><p>Longitud vehicular estimada</p></div></div>
                 <label>Metros {{form.tipo==='MEDICION'?'*':''}}<div class="input-unit"><input name="cola" type="number" min="0" max="50000" [(ngModel)]="form.colaMetros" placeholder="Ej. 400"><span>metros</span></div></label>
-                <label class="upload">📷 Adjuntar fotografía<input type="file" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'COLA')"><small>{{fotos['COLA']?.name||'Sin fotografía seleccionada'}}</small></label>
+                <div class="photo-controls">
+                  <label class="upload">📷 Adjuntar fotografía<input type="file" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'COLA')"><small>{{fotos['COLA']?.name||'Sin fotografía seleccionada'}}</small></label>
+                  <button type="button" class="paste-target" (paste)="pegarArchivo($event,'COLA')" title="Haz clic y pega una imagen con Ctrl+V o Cmd+V">⌨ Pegar imagen aquí <small>Haz clic y presiona Ctrl+V o Cmd+V</small></button>
+                  <div class="photo-preview" *ngIf="previsualizaciones['COLA']">
+                    <img [src]="previsualizaciones['COLA']" alt="Vista previa de la fotografía de cola">
+                    <button type="button" class="remove-photo" (click)="quitarFoto('COLA')">× Quitar fotografía</button>
+                  </div>
+                </div>
               </div>
             </div>
             <label class="description">Observaciones adicionales<textarea rows="4" name="descripcion" [(ngModel)]="form.descripcion" placeholder="Describe brevemente el contexto del evento…"></textarea></label>
           </section>
-          <div class="actions"><button type="button" class="btn outline" (click)="form=nuevoFormulario(form.tipo);fotos={}">Limpiar formulario</button><button type="submit" class="btn primary" [disabled]="guardando">{{guardando?'Guardando…':(form.id?'Guardar cambios':'Guardar registro')}} →</button></div>
+          <div class="actions"><button type="button" class="btn outline" (click)="reiniciarFormulario()">Limpiar formulario</button><button type="submit" class="btn primary" [disabled]="guardando">{{guardando?'Guardando…':(form.id?'Guardar cambios':'Guardar registro')}} →</button></div>
         </form>
       </ng-container>
 
