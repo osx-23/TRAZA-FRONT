@@ -18,7 +18,7 @@
     <div class="brand-logo"><span class="logo">◭</span><span><strong>TRAZA</strong><small>CONTROL DE TRÁFICO</small></span></div>
     <div class="sidebar-label">OPERACIONES</div>
     <nav>
-      <button *ngFor="let item of secciones" [hidden]="item.key==='vias' && !supervisor" class="nav-item" [class.active]="seccion===item.key" (click)="navegar(item.key)">
+      <button *ngFor="let item of secciones" [style.display]="item.key==='vias' && !supervisor ? 'none' : ''" class="nav-item" [class.active]="seccion===item.key" (click)="navegar(item.key)">
         <span class="nav-icon">{{item.icono}}</span>{{item.titulo}}
         <span *ngIf="seccion===item.key" class="nav-dot"></span>
       </button>
