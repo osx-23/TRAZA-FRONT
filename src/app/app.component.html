@@ -18,7 +18,7 @@
     <div class="brand-logo"><span class="logo">◭</span><span><strong>TRAZA</strong><small>CONTROL DE TRÁFICO</small></span></div>
     <div class="sidebar-label">OPERACIONES</div>
     <nav>
-      <button *ngFor="let item of secciones" class="nav-item" [class.active]="seccion===item.key" (click)="navegar(item.key)">
+      <button *ngFor="let item of secciones" [hidden]="item.key==='vias' && !supervisor" class="nav-item" [class.active]="seccion===item.key" (click)="navegar(item.key)">
         <span class="nav-icon">{{item.icono}}</span>{{item.titulo}}
         <span *ngIf="seccion===item.key" class="nav-dot"></span>
       </button>
@@ -64,69 +64,203 @@
       </ng-container>
 
       <ng-container *ngIf="seccion==='incidencias'||seccion==='colas'">
-        <div class="page-heading"><div><div class="eyebrow">{{form.id?'EDITAR REGISTRO':'REGISTRO OPERATIVO'}}</div><h1>{{seccion==='incidencias'?'Nueva incidencia':'Medición de cola'}}</h1><p>{{seccion==='incidencias'?'Reporta la situación actual, incidencias e ingreso de motorizados.':'Registra la longitud observada de la cola vehicular.'}}</p></div><span class="soft-tag">{{seccion==='incidencias'?'Incidencia':'Medición'}}</span></div>
-        <form (ngSubmit)="guardar()">
-          <section class="panel form-panel"><div class="panel-heading"><div><h2>Información del registro</h2><p>Datos generales de la operación</p></div><span class="required-label">* Campos obligatorios</span></div>
-            <div class="form-grid">
-              <label>Plaza *<select name="plaza" [(ngModel)]="form.plazaCodigo" required><option *ngFor="let p of plazas" [value]="p.codigo">{{p.nombre}}</option></select></label>
-              <label>Turno *<select name="turno" [(ngModel)]="form.turno" required><option value="A">Turno A</option><option value="B">Turno B</option><option value="C">Turno C</option></select></label>
-              <label>Vía / referencia<input name="via" type="text" maxlength="60" [(ngModel)]="form.via" placeholder="Ej. 151 o Plaza general"></label>
-              <label>Fecha *<input name="fecha" type="date" [(ngModel)]="form.fecha" required></label>
-              <label>Hora *<input name="hora" type="time" [(ngModel)]="form.hora" required></label>
-              <label>Estado<select name="estado" [(ngModel)]="form.estado"><option value="REGISTRADO">Registrado</option><option value="EN_OBSERVACION">En observación</option><option value="ATENDIDO">Atendido</option></select></label>
+        <div class="report-head">
+          <div class="report-head-intro">
+            <div class="report-eyebrow"><span class="report-live-dot"></span> REGISTRO OPERATIVO <span> / </span> TRAZA</div>
+            <h1>{{form.id?'Editar registro':(form.tipo==='INCIDENCIA'?'Registrar incidencia':'Medición de cola')}}</h1>
+            <p>Centraliza las condiciones de tránsito, el ingreso, los incidentes y las evidencias fotográficas de tu plaza.</p>
+          </div>
+          <div class="report-head-aside">
+            <span class="report-current-badge">{{form.tipo==='INCIDENCIA'?'⚠ Incidencia':'↗ Medición'}}</span>
+            <span class="report-head-meta">Registro con fecha y turno</span>
+          </div>
+        </div>
+        <form class="report-form" (ngSubmit)="guardar()">
+          <section class="report-panel">
+            <div class="report-panel-heading"><span class="report-step">01</span>
+              <div><span class="report-section-eyebrow">DATOS GENERALES</span><h2>Ubicación y turno</h2><p>Selecciona la plaza para consultar únicamente sus vías asignadas.</p></div>
+              <span class="report-required">* Obligatorio</span>
+            </div>
+            <div class="report-fields-grid">
+              <div class="report-field"><label for="report-plaza">Plaza *</label>
+                <select id="report-plaza" name="plaza" [ngModel]="form.plazaCodigo" (ngModelChange)="establecerPlaza($event)" required>
+                  <option value="" disabled>Seleccionar plaza</option><option *ngFor="let p of plazas" [value]="p.codigo">{{p.nombre}}</option>
+                </select>
+              </div>
+              <div class="report-field"><label for="report-via">Vía</label>
+                <select id="report-via" name="via" [(ngModel)]="form.via" [disabled]="cargandoVias || !viasDisponibles.length">
+                  <option value="">Plaza general / No aplica</option>
+                  <option *ngFor="let v of viasDisponibles" [value]="v.numero">Vía {{v.numero}}</option>
+                  <option *ngIf="form.via && !cargandoVias && !viasDisponibles.length" [value]="form.via">Vía histórica {{form.via}}</option>
+                </select>
+                <small class="report-help" *ngIf="cargandoVias">Consultando vías de la plaza...</small>
+                <small class="report-help" *ngIf="!cargandoVias && !viasDisponibles.length">No hay vías asignadas. Puedes registrar a nivel de plaza.</small>
+              </div>
+              <div class="report-field"><label for="report-turno">Turno *</label>
+                <select id="report-turno" name="turno" [(ngModel)]="form.turno" required><option value="A">Turno A</option><option value="B">Turno B</option><option value="C">Turno C</option></select>
+              </div>
+              <div class="report-field"><label for="report-fecha">Fecha *</label><input id="report-fecha" name="fecha" type="date" [(ngModel)]="form.fecha" required></div>
+              <div class="report-field"><label for="report-hora">Hora *</label><input id="report-hora" name="hora" type="time" [(ngModel)]="form.hora" required></div>
+              <div class="report-field"><label for="report-estado">Estado del registro</label><select id="report-estado" name="estado" [(ngModel)]="form.estado"><option value="REGISTRADO">Registrado</option><option value="EN_OBSERVACION">En observación</option><option value="ATENDIDO">Atendido</option></select></div>
             </div>
           </section>
-          <section class="panel form-panel"><div class="panel-heading"><div><h2>Detalle {{seccion==='incidencias'?'de la incidencia':'de la medición'}}</h2><p>Condiciones observadas en la plaza</p></div></div>
-            <div class="detail-grid">
-              <div class="detail-card"><div class="detail-head"><span class="num">01</span><div><h3>Situación de la plaza</h3><p>Estado general del tránsito</p></div></div>
-                <label>Situación<select name="situacion" [(ngModel)]="form.situacion"><option value="">Seleccionar situación</option><option *ngFor="let s of situaciones" [value]="s">{{s}}</option></select></label>
-                <div class="photo-controls">
-                  <label class="upload">📷 Adjuntar fotografía<input type="file" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'PLAZA')"><small>{{fotos['PLAZA']?.name||'Sin fotografía seleccionada'}}</small></label>
-                  <button type="button" class="paste-target" (paste)="pegarArchivo($event,'PLAZA')" title="Haz clic y pega una imagen con Ctrl+V o Cmd+V">⌨ Pegar imagen aquí <small>Haz clic y presiona Ctrl+V o Cmd+V</small></button>
-                  <div class="photo-preview" *ngIf="previsualizaciones['PLAZA']">
-                    <img [src]="previsualizaciones['PLAZA']" alt="Vista previa de la fotografía de la plaza">
-                    <button type="button" class="remove-photo" (click)="quitarFoto('PLAZA')">× Quitar fotografía</button>
+
+          <section class="report-panel">
+            <div class="report-panel-heading"><span class="report-step">02</span><div>
+              <span class="report-section-eyebrow">REPORTE DE CAMPO</span><h2>Condiciones observadas</h2>
+              <p>Completa los cuatro apartados y adjunta las fotografías que tengas disponibles.</p>
+            </div><span class="report-attachment-count">{{totalFotos}} / 4 fotos</span></div>
+            <div class="report-details-grid">
+              <article class="report-detail-card">
+                  <div class="report-detail-header"><span class="report-card-icon">↗</span><div><span class="report-card-step">CONDICIÓN 01</span><h3>Situación de la plaza</h3><p>Cómo se encuentra el tránsito</p></div></div>
+                  <div class="report-field">
+                    <label for="report-field-situacion">Condición del tránsito</label>
+                    <select id="report-field-situacion" name="situacion" [(ngModel)]="form.situacion"><option value="">Seleccionar una opción</option><option *ngFor="let s of situaciones" [value]="s">{{s}}</option></select>
                   </div>
-                </div>
-              </div>
-              <div class="detail-card"><div class="detail-head"><span class="num">02</span><div><h3>Ingreso</h3><p>Presencia de motorizado</p></div></div>
-                <label>Estado de ingreso<select name="ingreso" [(ngModel)]="form.ingreso"><option value="">Seleccionar ingreso</option><option *ngFor="let s of ingresos" [value]="s">{{s}}</option></select></label>
-                <div class="photo-controls">
-                  <label class="upload">📷 Adjuntar fotografía<input type="file" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'INGRESO')"><small>{{fotos['INGRESO']?.name||'Sin fotografía seleccionada'}}</small></label>
-                  <button type="button" class="paste-target" (paste)="pegarArchivo($event,'INGRESO')" title="Haz clic y pega una imagen con Ctrl+V o Cmd+V">⌨ Pegar imagen aquí <small>Haz clic y presiona Ctrl+V o Cmd+V</small></button>
-                  <div class="photo-preview" *ngIf="previsualizaciones['INGRESO']">
-                    <img [src]="previsualizaciones['INGRESO']" alt="Vista previa de la fotografía de ingreso">
-                    <button type="button" class="remove-photo" (click)="quitarFoto('INGRESO')">× Quitar fotografía</button>
+                  <div class="report-photo-area">
+                      <div class="report-photo-caption"><span>FOTOGRAFÍA DE EVIDENCIA</span><span class="report-photo-ready" *ngIf="fotos['PLAZA']">✓ Lista</span></div>
+                      <div class="report-photo-preview" *ngIf="previsualizaciones['PLAZA']">
+                        <img [src]="previsualizaciones['PLAZA']" alt="Vista previa de Situación de la plaza">
+                        <div><strong>{{fotos['PLAZA']?.name}}</strong><small>Imagen preparada para subir</small></div>
+                        <button type="button" class="report-photo-remove" (click)="quitarFoto('PLAZA')" aria-label="Quitar fotografía de Situación de la plaza">×</button>
+                      </div>
+                      <div class="report-photo-actions">
+                        <label class="report-upload-button"><span>＋</span> Seleccionar foto
+                          <input type="file" class="report-file-hidden" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'PLAZA')">
+                        </label>
+                        <button type="button" class="report-paste-button" (paste)="pegarArchivo($event,'PLAZA')" title="Haz clic y pega una fotografía con Ctrl+V o Cmd+V">⌘ Pegar imagen</button>
+                      </div>
+                      <small class="report-photo-hint">Copia la captura, enfoca «Pegar imagen» y presiona Ctrl+V / Cmd+V · hasta 4 MB</small>
+                    </div>
+                </article>
+              <article class="report-detail-card">
+                  <div class="report-detail-header"><span class="report-card-icon">⇥</span><div><span class="report-card-step">CONDICIÓN 02</span><h3>Ingreso de motorizados</h3><p>Estado del apoyo en plaza</p></div></div>
+                  <div class="report-field">
+                    <label for="report-field-ingreso">Estado de ingreso</label>
+                    <select id="report-field-ingreso" name="ingreso" [(ngModel)]="form.ingreso"><option value="">Seleccionar una opción</option><option *ngFor="let s of ingresos" [value]="s">{{s}}</option></select>
                   </div>
-                </div>
-              </div>
-              <div class="detail-card"><div class="detail-head"><span class="num">03</span><div><h3>Incidente</h3><p>Eventos especiales reportados</p></div></div>
-                <label>Tipo de incidente<select name="incidente" [(ngModel)]="form.incidente"><option value="">Seleccionar incidente</option><option *ngFor="let s of incidentes" [value]="s">{{s}}</option></select></label>
-                <div class="photo-controls">
-                  <label class="upload">📷 Adjuntar fotografía<input type="file" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'INCIDENTE')"><small>{{fotos['INCIDENTE']?.name||'Sin fotografía seleccionada'}}</small></label>
-                  <button type="button" class="paste-target" (paste)="pegarArchivo($event,'INCIDENTE')" title="Haz clic y pega una imagen con Ctrl+V o Cmd+V">⌨ Pegar imagen aquí <small>Haz clic y presiona Ctrl+V o Cmd+V</small></button>
-                  <div class="photo-preview" *ngIf="previsualizaciones['INCIDENTE']">
-                    <img [src]="previsualizaciones['INCIDENTE']" alt="Vista previa de la fotografía de incidente">
-                    <button type="button" class="remove-photo" (click)="quitarFoto('INCIDENTE')">× Quitar fotografía</button>
+                  <div class="report-photo-area">
+                      <div class="report-photo-caption"><span>FOTOGRAFÍA DE EVIDENCIA</span><span class="report-photo-ready" *ngIf="fotos['INGRESO']">✓ Lista</span></div>
+                      <div class="report-photo-preview" *ngIf="previsualizaciones['INGRESO']">
+                        <img [src]="previsualizaciones['INGRESO']" alt="Vista previa de Ingreso de motorizados">
+                        <div><strong>{{fotos['INGRESO']?.name}}</strong><small>Imagen preparada para subir</small></div>
+                        <button type="button" class="report-photo-remove" (click)="quitarFoto('INGRESO')" aria-label="Quitar fotografía de Ingreso de motorizados">×</button>
+                      </div>
+                      <div class="report-photo-actions">
+                        <label class="report-upload-button"><span>＋</span> Seleccionar foto
+                          <input type="file" class="report-file-hidden" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'INGRESO')">
+                        </label>
+                        <button type="button" class="report-paste-button" (paste)="pegarArchivo($event,'INGRESO')" title="Haz clic y pega una fotografía con Ctrl+V o Cmd+V">⌘ Pegar imagen</button>
+                      </div>
+                      <small class="report-photo-hint">Copia la captura, enfoca «Pegar imagen» y presiona Ctrl+V / Cmd+V · hasta 4 MB</small>
+                    </div>
+                </article>
+              <article class="report-detail-card">
+                  <div class="report-detail-header"><span class="report-card-icon">⚠</span><div><span class="report-card-step">CONDICIÓN 03</span><h3>Incidentes detectados</h3><p>PNP, fallas o eventos relevantes</p></div></div>
+                  <div class="report-field">
+                    <label for="report-field-incidente">Tipo de incidente</label>
+                    <select id="report-field-incidente" name="incidente" [(ngModel)]="form.incidente"><option value="">Seleccionar una opción</option><option *ngFor="let s of incidentes" [value]="s">{{s}}</option></select>
                   </div>
-                </div>
-              </div>
-              <div class="detail-card"><div class="detail-head"><span class="num">04</span><div><h3>Tamaño de cola</h3><p>Longitud vehicular estimada</p></div></div>
-                <label>Metros {{form.tipo==='MEDICION'?'*':''}}<div class="input-unit"><input name="cola" type="number" min="0" max="50000" [(ngModel)]="form.colaMetros" placeholder="Ej. 400"><span>metros</span></div></label>
-                <div class="photo-controls">
-                  <label class="upload">📷 Adjuntar fotografía<input type="file" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'COLA')"><small>{{fotos['COLA']?.name||'Sin fotografía seleccionada'}}</small></label>
-                  <button type="button" class="paste-target" (paste)="pegarArchivo($event,'COLA')" title="Haz clic y pega una imagen con Ctrl+V o Cmd+V">⌨ Pegar imagen aquí <small>Haz clic y presiona Ctrl+V o Cmd+V</small></button>
-                  <div class="photo-preview" *ngIf="previsualizaciones['COLA']">
-                    <img [src]="previsualizaciones['COLA']" alt="Vista previa de la fotografía de cola">
-                    <button type="button" class="remove-photo" (click)="quitarFoto('COLA')">× Quitar fotografía</button>
+                  <div class="report-photo-area">
+                      <div class="report-photo-caption"><span>FOTOGRAFÍA DE EVIDENCIA</span><span class="report-photo-ready" *ngIf="fotos['INCIDENTE']">✓ Lista</span></div>
+                      <div class="report-photo-preview" *ngIf="previsualizaciones['INCIDENTE']">
+                        <img [src]="previsualizaciones['INCIDENTE']" alt="Vista previa de Incidentes detectados">
+                        <div><strong>{{fotos['INCIDENTE']?.name}}</strong><small>Imagen preparada para subir</small></div>
+                        <button type="button" class="report-photo-remove" (click)="quitarFoto('INCIDENTE')" aria-label="Quitar fotografía de Incidentes detectados">×</button>
+                      </div>
+                      <div class="report-photo-actions">
+                        <label class="report-upload-button"><span>＋</span> Seleccionar foto
+                          <input type="file" class="report-file-hidden" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'INCIDENTE')">
+                        </label>
+                        <button type="button" class="report-paste-button" (paste)="pegarArchivo($event,'INCIDENTE')" title="Haz clic y pega una fotografía con Ctrl+V o Cmd+V">⌘ Pegar imagen</button>
+                      </div>
+                      <small class="report-photo-hint">Copia la captura, enfoca «Pegar imagen» y presiona Ctrl+V / Cmd+V · hasta 4 MB</small>
+                    </div>
+                </article>
+              <article class="report-detail-card">
+                  <div class="report-detail-header"><span class="report-card-icon">▤</span><div><span class="report-card-step">CONDICIÓN 04</span><h3>Tamaño de la cola</h3><p>Longitud de vehículos en espera</p></div></div>
+                  <div class="report-field">
+                    <label for="report-field-colaMetros">Longitud observada {{form.tipo==='MEDICION'?'*':''}}</label>
+                    <div class="report-meters"><input id="report-field-colaMetros" name="cola" type="number" min="0" max="50000" [(ngModel)]="form.colaMetros" placeholder="Ej. 400"><span>metros</span></div>
                   </div>
-                </div>
-              </div>
+                  <div class="report-photo-area">
+                      <div class="report-photo-caption"><span>FOTOGRAFÍA DE EVIDENCIA</span><span class="report-photo-ready" *ngIf="fotos['COLA']">✓ Lista</span></div>
+                      <div class="report-photo-preview" *ngIf="previsualizaciones['COLA']">
+                        <img [src]="previsualizaciones['COLA']" alt="Vista previa de Tamaño de la cola">
+                        <div><strong>{{fotos['COLA']?.name}}</strong><small>Imagen preparada para subir</small></div>
+                        <button type="button" class="report-photo-remove" (click)="quitarFoto('COLA')" aria-label="Quitar fotografía de Tamaño de la cola">×</button>
+                      </div>
+                      <div class="report-photo-actions">
+                        <label class="report-upload-button"><span>＋</span> Seleccionar foto
+                          <input type="file" class="report-file-hidden" accept="image/jpeg,image/png,image/webp" (change)="seleccionarArchivo($event,'COLA')">
+                        </label>
+                        <button type="button" class="report-paste-button" (paste)="pegarArchivo($event,'COLA')" title="Haz clic y pega una fotografía con Ctrl+V o Cmd+V">⌘ Pegar imagen</button>
+                      </div>
+                      <small class="report-photo-hint">Copia la captura, enfoca «Pegar imagen» y presiona Ctrl+V / Cmd+V · hasta 4 MB</small>
+                    </div>
+                </article>
             </div>
-            <label class="description">Observaciones adicionales<textarea rows="4" name="descripcion" [(ngModel)]="form.descripcion" placeholder="Describe brevemente el contexto del evento…"></textarea></label>
           </section>
-          <div class="actions"><button type="button" class="btn outline" (click)="reiniciarFormulario()">Limpiar formulario</button><button type="submit" class="btn primary" [disabled]="guardando">{{guardando?'Guardando…':(form.id?'Guardar cambios':'Guardar registro')}} →</button></div>
+
+          <section class="report-panel">
+            <div class="report-panel-heading"><span class="report-step">03</span><div>
+              <span class="report-section-eyebrow">INFORMACIÓN COMPLEMENTARIA</span><h2>Observaciones</h2>
+              <p>Agrega detalles que ayuden a interpretar o dar seguimiento al registro.</p>
+            </div></div>
+            <div class="report-notes"><label for="report-descripcion">Descripción adicional</label>
+              <textarea id="report-descripcion" name="descripcion" rows="4" maxlength="10000" [(ngModel)]="form.descripcion" placeholder="Ej. Congestión de aproximadamente 400 metros, PNP controlando el semáforo de ingreso…"></textarea>
+            </div>
+          </section>
+
+          <div class="report-savebar">
+            <div><strong>{{form.plazaCodigo}}{{form.via?' · Vía '+form.via:''}} · Turno {{form.turno}}</strong><small>{{totalFotos}} evidencias preparadas · Se guardarán en Supabase Storage</small></div>
+            <div class="report-save-actions"><button type="button" class="btn outline" [disabled]="guardando" (click)="reiniciarFormulario()">Limpiar</button>
+              <button type="submit" class="btn primary report-save" [disabled]="guardando || cargandoVias">{{guardando?'Guardando…':(form.id?'Guardar cambios':'Registrar reporte')}} <span aria-hidden="true">→</span></button>
+            </div>
+          </div>
         </form>
+      </ng-container>
+
+      <ng-container *ngIf="seccion==='vias' && supervisor">
+        <div class="report-head">
+          <div class="report-head-intro"><div class="report-eyebrow"><span class="report-live-dot"></span> CONFIGURACIÓN / SUPERVISOR</div>
+            <h1>Vías por plaza</h1><p>Administra qué vías aparecen al registrar incidencias y mediciones de cola. Cada plaza tiene su propio catálogo.</p>
+          </div>
+          <div class="report-head-aside"><span class="report-current-badge">⚙ Administración</span></div>
+        </div>
+        <section class="report-panel">
+          <div class="report-panel-heading"><span class="report-step">01</span><div><span class="report-section-eyebrow">SELECCIÓN</span>
+            <h2>Seleccionar plaza</h2><p>Las vías se configuran y se habilitan de forma independiente.</p></div></div>
+          <div class="report-admin-selector report-field"><label for="via-plaza">Plaza que deseas administrar</label>
+            <select id="via-plaza" name="viaPlaza" [ngModel]="plazaGestion" (ngModelChange)="seleccionarPlazaGestion($event)">
+              <option *ngFor="let p of plazas" [value]="p.codigo">{{p.nombre}}</option>
+            </select>
+          </div>
+          <div class="report-admin-summary"><div><strong>{{plazaGestion}}</strong><small>Plaza seleccionada</small></div><div><strong>{{viasGestion.length}}</strong><small>Vías habilitadas</small></div></div>
+        </section>
+        <section class="report-panel">
+          <div class="report-panel-heading"><span class="report-step">02</span><div><span class="report-section-eyebrow">ASIGNACIÓN MASIVA O INDIVIDUAL</span>
+            <h2>Agregar vías</h2><p>Para una sola vía, utiliza el mismo número en ambos campos. Para un rango, indica el inicio y el final.</p></div></div>
+          <form class="report-admin-add" (ngSubmit)="asignarRangoVias()">
+            <div class="report-field"><label for="via-desde">Desde la vía</label><input id="via-desde" name="desdeVia" type="number" min="1" max="999999" [(ngModel)]="desdeVia" required></div>
+            <div class="report-field"><label for="via-hasta">Hasta la vía</label><input id="via-hasta" name="hastaVia" type="number" min="1" max="999999" [(ngModel)]="hastaVia" required></div>
+            <button type="submit" class="btn primary" [disabled]="gestionandoVias">＋ {{gestionandoVias?'Guardando…':'Asignar vías'}}</button>
+          </form>
+          <p class="report-admin-hint">Ejemplo: para P4 y P5, asigna del 101 al 105 a cada plaza. Máximo 100 vías por operación.</p>
+        </section>
+        <section class="report-panel">
+          <div class="report-panel-heading"><span class="report-step">03</span><div><span class="report-section-eyebrow">ASIGNACIONES ACTIVAS</span>
+            <h2>Vías de {{plazaGestion}}</h2><p>Puedes desactivar una asignación sin borrar los registros históricos.</p></div>
+            <button class="btn outline" type="button" (click)="cargarViasGestion()" [disabled]="gestionandoVias">↻ Actualizar</button>
+          </div>
+          <div class="report-admin-vias" *ngIf="viasGestion.length;else sinViasConfiguradas">
+            <div class="report-admin-via" *ngFor="let via of viasGestion"><span class="report-admin-via-icon">↗</span>
+              <div><strong>Vía {{via.numero}}</strong><small>Habilitada</small></div>
+              <button type="button" (click)="quitarViaGestion(via.numero)" [disabled]="gestionandoVias" title="Desactivar vía {{via.numero}}">× Desactivar</button>
+            </div>
+          </div>
+          <ng-template #sinViasConfiguradas><div class="report-admin-empty">Esta plaza todavía no tiene vías asignadas. Puedes agregarlas en la sección anterior.</div></ng-template>
+        </section>
       </ng-container>
 
       <ng-container *ngIf="seccion==='historial'">
