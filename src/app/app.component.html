@@ -88,7 +88,7 @@
                 </select>
               </div>
               <div class="report-field"><label for="report-via">Vía</label>
-                <select id="report-via" name="via" [(ngModel)]="form.via" [disabled]="cargandoVias || !viasDisponibles.length">
+                <select id="report-via" name="via" [(ngModel)]="form.via" [disabled]="cargandoVias">
                   <option value="">Plaza general / No aplica</option>
                   <option *ngFor="let v of viasDisponibles" [value]="v.numero">Vía {{v.numero}}</option>
                   <option *ngIf="viaHistorica && !cargandoVias" [value]="form.via">Vía histórica {{form.via}}</option>
