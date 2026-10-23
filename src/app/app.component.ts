@@ -54,6 +54,7 @@ export class AppComponent implements OnDestroy {
   get maxPlaza(){return Math.max(1,...(this.stats?.plazas.map(d=>Number(d.total))||[]));}
   get mediaCola(){return Number(this.stats?.kpi.promedioCola||0);}
   get totalFotos(){return Object.values(this.fotos).filter(Boolean).length;}
+  get viaHistorica(){return !!this.form.via && !this.viasDisponibles.some(v=>v.numero===this.form.via);}
   hoy(){
     const d=new Date(),pad=(n:number)=>String(n).padStart(2,'0');
     return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
