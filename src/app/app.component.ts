@@ -97,9 +97,15 @@ export class AppComponent implements OnDestroy {
     if(s==='analisis'||s==='dashboard')this.cargarEstadisticas();
     if(s==='evidencias')this.cargarEvidencias();
   }
-  cambiarPlazaRegistro(){
+  establecerPlaza(plaza:string){
+    this.form.plazaCodigo=plaza;
     this.form.via='';
     this.cargarViasFormulario();
+  }
+  seleccionarPlazaGestion(plaza:string){
+    this.plazaGestion=plaza;
+    this.viasGestion=[];
+    this.cargarViasGestion();
   }
   async cargarViasFormulario(){
     const plaza=this.form.plazaCodigo;
