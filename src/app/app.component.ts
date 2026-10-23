@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, inject } from '@angular/core';
+import { Component, HostListener, OnDestroy, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -29,6 +29,7 @@ export class AppComponent implements OnDestroy {
   gestionandoVias=false;
   filtros={tipo:'',plaza:'',desde:'',hasta:''};
   fotos:Record<string,File|undefined>={};
+  evidenciaPegadoActiva:string|null=null;
   previsualizaciones:Record<string,string>={};
   urls:Record<string,string>={};
   form:Evento=this.nuevoFormulario('INCIDENCIA');
@@ -78,6 +79,7 @@ export class AppComponent implements OnDestroy {
   }
   logout(){sessionStorage.removeItem('traza_token');sessionStorage.removeItem('traza_nombre');sessionStorage.removeItem('traza_rol');
     this.limpiarFotos();
+    this.evidenciaPegadoActiva=null;
     this.token='';this.usuario='';this.rol='';this.eventos=[];this.evidencias=[];this.stats=null;this.error='';}
   async inicializar(){
     this.cargando=true;this.error='';
@@ -91,6 +93,7 @@ export class AppComponent implements OnDestroy {
   }
   navegar(s:Seccion){
     this.seccion=s;this.menuOpen=false;this.error='';this.exito='';
+    this.evidenciaPegadoActiva=null;
     if(s==='incidencias'){this.form=this.nuevoFormulario('INCIDENCIA');this.limpiarFotos();this.cargarViasFormulario();}
     if(s==='colas'){this.form=this.nuevoFormulario('MEDICION');this.limpiarFotos();this.cargarViasFormulario();}
     if(s==='vias' && this.supervisor)this.cargarViasGestion();
@@ -186,19 +189,41 @@ export class AppComponent implements OnDestroy {
     input.value='';
     if(file)this.agregarFoto(file,categoria);
   }
+  activarPegado(categoria:string){
+    this.evidenciaPegadoActiva=categoria;
+  }
+  @HostListener('document:paste',['$event'])
+  onDocumentPaste(event:ClipboardEvent){
+    if(!this.autenticado || !['incidencias','colas'].includes(this.seccion) || !this.evidenciaPegadoActiva || this.guardando)return;
+    const target=event.target;
+    // No interceptar pegados de texto en los campos del formulario.
+    if(target instanceof Element && target.closest('input,textarea,select,[contenteditable="true"]'))return;
+    const imagen=Array.from(event.clipboardData?.items??[])
+      .find(item=>item.kind==='file' && item.type.startsWith('image/'));
+    if(!imagen)return;
+    this.pegarArchivo(event,this.evidenciaPegadoActiva);
+  }
   pegarArchivo(event:ClipboardEvent,categoria:string){
     const items=Array.from(event.clipboardData?.items ?? []);
     const imagen=items.find(item=>item.kind==='file' && item.type.startsWith('image/'))?.getAsFile()
       ?? Array.from(event.clipboardData?.files ?? []).find(file=>file.type.startsWith('image/'));
-    if(!imagen){
-      this.error='No hay una imagen en el portapapeles. Copia una captura o fotografía y vuelve a intentarlo.';
-      return;
-    }
+    if(!imagen)return;
     event.preventDefault();
+    this.activarPegado(categoria);
     const extension=imagen.type==='image/jpeg'?'jpg':imagen.type==='image/webp'?'webp':'png';
     const archivo=new File([imagen],categoria.toLowerCase()+'-pegada-'+Date.now()+'.'+extension,
       {type:imagen.type,lastModified:Date.now()});
     this.agregarFoto(archivo,categoria);
+  }
+  sobreArrastre(event:DragEvent){
+    if(Array.from(event.dataTransfer?.types??[]).includes('Files'))event.preventDefault();
+  }
+  soltarArchivo(event:DragEvent,categoria:string){
+    event.preventDefault();
+    this.activarPegado(categoria);
+    const archivo=Array.from(event.dataTransfer?.files??[]).find(file=>file.type.startsWith('image/'));
+    if(archivo)this.agregarFoto(archivo,categoria);
+    else this.error='Arrastra una imagen JPG, PNG o WebP.';
   }
   private agregarFoto(archivo:File,categoria:string){
     if(!['image/jpeg','image/png','image/webp'].includes(archivo.type)){
@@ -211,6 +236,7 @@ export class AppComponent implements OnDestroy {
     }
     if(this.previsualizaciones[categoria])URL.revokeObjectURL(this.previsualizaciones[categoria]);
     this.fotos[categoria]=archivo;
+    this.evidenciaPegadoActiva=categoria;
     this.previsualizaciones[categoria]=URL.createObjectURL(archivo);
     this.error='';
     this.exito='';
@@ -221,6 +247,7 @@ export class AppComponent implements OnDestroy {
     delete this.fotos[categoria];
   }
   private limpiarFotos(){
+    this.evidenciaPegadoActiva=null;
     Object.values(this.previsualizaciones).forEach(url=>URL.revokeObjectURL(url));
     this.previsualizaciones={};
     this.fotos={};
