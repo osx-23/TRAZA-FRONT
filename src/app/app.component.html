@@ -91,7 +91,7 @@
                 <select id="report-via" name="via" [(ngModel)]="form.via" [disabled]="cargandoVias || !viasDisponibles.length">
                   <option value="">Plaza general / No aplica</option>
                   <option *ngFor="let v of viasDisponibles" [value]="v.numero">Vía {{v.numero}}</option>
-                  <option *ngIf="form.via && !cargandoVias && !viasDisponibles.length" [value]="form.via">Vía histórica {{form.via}}</option>
+                  <option *ngIf="viaHistorica && !cargandoVias" [value]="form.via">Vía histórica {{form.via}}</option>
                 </select>
                 <small class="report-help" *ngIf="cargandoVias">Consultando vías de la plaza...</small>
                 <small class="report-help" *ngIf="!cargandoVias && !viasDisponibles.length">No hay vías asignadas. Puedes registrar a nivel de plaza.</small>
